@@ -1,0 +1,41 @@
+// File: KeyRemapDLL.cpp
+#include <windows.h>
+
+HINSTANCE hInst;
+
+// Low-level keyboard hook
+HHOOK hHook = NULL;
+
+// Our hook callback
+LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    if (nCode == HC_ACTION) {
+        KBDLLHOOKSTRUCT* kbd = (KBDLLHOOKSTRUCT*)lParam;
+
+        // When Space is pressed, send J instead
+        if (wParam == WM_KEYDOWN && kbd->vkCode == VK_SPACE) {
+            // Inject J key (keycode 0x4A)
+            INPUT input = {0};
+            input.type = INPUT_KEYBOARD;
+            input.ki.wVk = 0x4A;  // J key
+            SendInput(1, &input, sizeof(INPUT));
+
+            // Block original Space key
+            return 1;
+        }
+    }
+    return CallNextHookEx(hHook, nCode, wParam, lParam);
+}
+
+// DLL entry point
+BOOL APIENTRY DllMain(HINSTANCE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
+    switch (ul_reason_for_call) {
+        case DLL_PROCESS_ATTACH:
+            hInst = hModule;
+            hHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardProc, hInst, 0);
+            break;
+        case DLL_PROCESS_DETACH:
+            if (hHook) UnhookWindowsHookEx(hHook);
+            break;
+    }
+    return TRUE;
+}
